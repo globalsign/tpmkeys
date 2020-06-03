@@ -324,7 +324,7 @@ func TestTLSClient(t *testing.T) {
 			// Make request to test server.
 			c := s.Client()
 			c.Transport.(*http.Transport).TLSClientConfig.Certificates = []tls.Certificate{
-				tls.Certificate{
+				{
 					Certificate: [][]byte{cert.Raw},
 					PrivateKey:  key,
 					Leaf:        cert,
