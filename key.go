@@ -53,47 +53,9 @@ func (k *PrivateKey) Public() crypto.PublicKey {
 
 // Sign signs digest with the private key.
 func (k *PrivateKey) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, error) {
-	var scheme tpm2.SigScheme
-
-	// Use the signature algorithm specified by the key, or choose an
-	// appropriate based on the key type and the signer options.
-	if k.scheme == nil || k.scheme.Alg == tpm2.AlgNull {
-		switch t := k.pubKey.(type) {
-		case *rsa.PublicKey:
-			switch opts.(type) {
-			case *rsa.PSSOptions:
-				scheme.Alg = tpm2.AlgRSAPSS
-
-			default:
-				scheme.Alg = tpm2.AlgRSASSA
-			}
-
-		case *ecdsa.PublicKey:
-			scheme.Alg = tpm2.AlgECDSA
-
-		default:
-			return nil, fmt.Errorf("unsupported public key type: %T", t)
-		}
-	} else {
-		scheme.Alg = k.scheme.Alg
-	}
-
-	// Select a hash algorithm based on the signer options.
-	switch opts.HashFunc() {
-	case crypto.SHA1:
-		scheme.Hash = tpm2.AlgSHA1
-
-	case crypto.SHA256:
-		scheme.Hash = tpm2.AlgSHA256
-
-	case crypto.SHA384:
-		scheme.Hash = tpm2.AlgSHA384
-
-	case crypto.SHA512:
-		scheme.Hash = tpm2.AlgSHA512
-
-	default:
-		return nil, fmt.Errorf("unsupported hash function: %d", opts.HashFunc())
+	scheme, err := k.sigScheme(opts)
+	if err != nil {
+		return nil, err
 	}
 
 	// Sign digest.
@@ -152,21 +114,10 @@ func (k *PrivateKey) Decrypt(rand io.Reader, msg []byte, opts crypto.DecrypterOp
 			label = string(o.Label)
 		}
 
-		switch o.Hash {
-		case crypto.SHA1:
-			scheme.Hash = tpm2.AlgSHA1
-
-		case crypto.SHA256:
-			scheme.Hash = tpm2.AlgSHA256
-
-		case crypto.SHA384:
-			scheme.Hash = tpm2.AlgSHA384
-
-		case crypto.SHA512:
-			scheme.Hash = tpm2.AlgSHA512
-
-		default:
-			return nil, fmt.Errorf("unsupported hash function: %d", o.Hash)
+		var err error
+		scheme.Hash, err = tpmHash(o.Hash)
+		if err != nil {
+			return nil, err
 		}
 
 	default:
@@ -211,6 +162,64 @@ func (k *PrivateKey) getHandle() (io.ReadWriter, tpmutil.Handle, func(), error) 
 		tpm2.FlushContext(tpm, handle)
 		tpm.Close()
 	}, nil
+}
+
+// sigScheme returns a signature scheme appropriate for the key and the
+// provided signer options.
+func (k *PrivateKey) sigScheme(opts crypto.SignerOpts) (tpm2.SigScheme, error) {
+	var scheme tpm2.SigScheme
+
+	// Use the signature algorithm specified by the key, or choose an
+	// appropriate one based on the key type and the signer options.
+	if k.scheme == nil || k.scheme.Alg == tpm2.AlgNull {
+		switch t := k.pubKey.(type) {
+		case *rsa.PublicKey:
+			switch opts.(type) {
+			case *rsa.PSSOptions:
+				scheme.Alg = tpm2.AlgRSAPSS
+
+			default:
+				scheme.Alg = tpm2.AlgRSASSA
+			}
+
+		case *ecdsa.PublicKey:
+			scheme.Alg = tpm2.AlgECDSA
+
+		default:
+			return tpm2.SigScheme{}, fmt.Errorf("unsupported public key type: %T", t)
+		}
+	} else {
+		scheme.Alg = k.scheme.Alg
+	}
+
+	// Select a hash algorithm based on the signer options.
+	var err error
+	scheme.Hash, err = tpmHash(opts.HashFunc())
+	if err != nil {
+		return tpm2.SigScheme{}, nil
+	}
+
+	return scheme, nil
+}
+
+// tpmHash returns the appropriate tpm2.Algorithm for the provided hash, or
+// an error if the hash is not supported.
+func tpmHash(h crypto.Hash) (tpm2.Algorithm, error) {
+	switch h {
+	case crypto.SHA1:
+		return tpm2.AlgSHA1, nil
+
+	case crypto.SHA256:
+		return tpm2.AlgSHA256, nil
+
+	case crypto.SHA384:
+		return tpm2.AlgSHA384, nil
+
+	case crypto.SHA512:
+		return tpm2.AlgSHA512, nil
+	}
+
+	return 0, fmt.Errorf("unsupported hash function: %d", h)
 }
 
 // NewFromActiveHandle returns a private key object representing the key
