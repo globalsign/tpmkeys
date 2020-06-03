@@ -2,6 +2,7 @@
 
 [![GoDoc](https://godoc.org/github.com/globalsign/tpmkeys?status.svg)](https://godoc.org/github.com/globalsign/tpmkeys)
 [![Build Status](https://travis-ci.org/globalsign/tpmkeys.svg?branch=master)](https://travis-ci.org/globalsign/tpmkeys)
+[![Go Report Card](https://goreportcard.com/badge/github.com/globalsign/tpmkeys)](https://goreportcard.com/report/github.com/globalsign/tpmkeys)
 
 Package tpmkeys provides an implementation of crypto.Signer and crypto.Decrypter
 for private keys resident on a TPM 2.0 (Trusted Platform Module) device.
