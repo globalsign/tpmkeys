@@ -13,7 +13,7 @@ as `crypto` and `tls`.
 
 ## Install
 
-    go get -u github.com/globalsign/tpmkeys
+    go get github.com/globalsign/tpmkeys
 
 ## License
 

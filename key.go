@@ -65,7 +65,7 @@ func (k *PrivateKey) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts)
 	}
 	defer closeFunc()
 
-	sig, err := tpm2.Sign(rw, handle, k.password, digest, &scheme)
+	sig, err := tpm2.Sign(rw, handle, k.password, digest, nil, &scheme)
 	if err != nil {
 		return nil, err
 	}
