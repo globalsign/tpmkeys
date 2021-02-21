@@ -143,7 +143,7 @@ func (k *PrivateKey) getHandle() (io.ReadWriter, tpmutil.Handle, func(), error) 
 		return k.tpmRW, k.activeHandle, func() {}, nil
 	}
 
-	tpm, err := tpm2.OpenTPM(k.tpmPath)
+	tpm, err := openTPM(k.tpmPath)
 	if err != nil {
 		return nil, 0, nil, fmt.Errorf("failed to open TPM: %v", err)
 	}
@@ -249,7 +249,7 @@ func NewFromActiveHandle(rw io.ReadWriter, handle uint32, password string) (*Pri
 // so the returned key is usable for as long as the key remains at that
 // persistent handle.
 func NewFromPersistentHandle(path string, handle uint32, password string) (*PrivateKey, error) {
-	tpm, err := tpm2.OpenTPM(path)
+	tpm, err := openTPM(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open TPM: %v", err)
 	}
@@ -281,7 +281,7 @@ func NewFromBlobs(
 	pubBlob, privBlob []byte,
 	password string,
 ) (*PrivateKey, error) {
-	tpm, err := tpm2.OpenTPM(path)
+	tpm, err := openTPM(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open TPM: %v", err)
 	}
